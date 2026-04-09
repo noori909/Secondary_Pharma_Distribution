@@ -1,5 +1,3 @@
-
-
 from sqlalchemy import (
     Column,
     Integer,
@@ -11,16 +9,27 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from data.database import Base
 
+
 class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True)
+
     name = Column(String, nullable=False)
     company = Column(String, nullable=False)
-    trade_price = Column(Float, nullable=False)
+
+    trade_price = Column(Float, nullable=False)   # Distributor price
+    mrp = Column(Float, nullable=False)           # Retail price
+
+    quantity_in_stock = Column(Integer, default=0)
+    batch = Column(String, nullable=True)
+    formula = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+
     status = Column(String, default="active")
 
     sales = relationship("Sale", back_populates="product")
+    sale_items = relationship("SaleItem", back_populates="product")
 
 
 class Rep(Base):
@@ -42,6 +51,17 @@ class Area(Base):
 
     sales = relationship("Sale", back_populates="area")
 
+
+class Customer(Base):
+    __tablename__ = "customers"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    status = Column(String, default="active")
+
+    sales = relationship("Sale", back_populates="customer")
+
+
 class Sale(Base):
     __tablename__ = "sales"
 
@@ -50,14 +70,35 @@ class Sale(Base):
 
     rep_id = Column(Integer, ForeignKey("reps.id"), nullable=False)
     area_id = Column(Integer, ForeignKey("areas.id"), nullable=False)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
 
     quantity = Column(Integer, nullable=False)
+    discount = Column(Float, default=0.0)
     net_amount = Column(Float, nullable=False)
 
     rep = relationship("Rep", back_populates="sales")
     area = relationship("Area", back_populates="sales")
+    customer = relationship("Customer", back_populates="sales")
     product = relationship("Product", back_populates="sales")
+    items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
+
+
+class SaleItem(Base):
+    __tablename__ = "sale_items"
+
+    id = Column(Integer, primary_key=True)
+    sale_id = Column(Integer, ForeignKey("sales.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    trade_price = Column(Float, nullable=False)
+    mrp = Column(Float, nullable=False)
+    discount = Column(Float, default=0.0)
+    line_total = Column(Float, nullable=False)
+
+    sale = relationship("Sale", back_populates="items")
+    product = relationship("Product", back_populates="sale_items")
+
 
 class Bonus(Base):
     __tablename__ = "bonuses"

@@ -14,7 +14,7 @@ class ProductsUI(tk.Frame):
             bg="#ecf0f1"
         ).pack(pady=20)
 
-        columns = ("ID", "Name", "Company", "Price", "Status")
+        columns = ("ID", "Name", "Company", "TP", "MRP", "Stock", "Status")
 
         table = ttk.Treeview(self, columns=columns, show="headings", height=15)
         for col in columns:
@@ -27,5 +27,13 @@ class ProductsUI(tk.Frame):
             table.insert(
                 "",
                 "end",
-                values=(p.id, p.name, p.company, p.price, p.status)
+                values=(
+                    p.id,
+                    p.name,
+                    p.company,
+                    p.trade_price,
+                    p.mrp,
+                    p.quantity_in_stock,
+                    p.status,
+                )
             )

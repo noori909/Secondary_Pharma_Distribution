@@ -1,10 +1,13 @@
-import sys
-from PySide6.QtWidgets import QApplication, QLabel
+from ui.main_app import PharmaApp
+from data.init_db import init_db
 
-app = QApplication(sys.argv)
 
-label = QLabel("Pharma Distribution System")
-label.resize(400, 200)
-label.show()
+def main() -> None:
+    # Ensure SQLite tables exist before any UI screen queries them.
+    init_db()
+    app = PharmaApp()
+    app.mainloop()
 
-sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()

@@ -5,6 +5,7 @@ from ui.dashboard import Dashboard
 from ui.products_ui import ProductsUI
 from ui.reps_ui import RepsUI
 from ui.areas_ui import AreasUI
+from ui.customers_ui import CustomersUI
 from ui.sales_ui import SalesUI
 
 
@@ -30,6 +31,7 @@ class PharmaApp(tk.Tk):
             "Products": ProductsUI,
             "Reps": RepsUI,
             "Areas": AreasUI,
+            "Customers": CustomersUI,
             "Sales": SalesUI
         }
 
