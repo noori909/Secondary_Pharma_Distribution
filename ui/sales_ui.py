@@ -1,10 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from logic.sales_logic import get_all_sales, record_bill
+from logic.sales_logic import get_recent_sales_for_ui, record_bill
 from logic.rep_logic import get_all_reps
 from logic.area_logic import get_all_areas
 from logic.customer_logic import get_all_customers
 from logic.product_logic import get_all_products
+from ui.receipt_window import open_receipt_window
 
 
 class SalesUI(tk.Frame):
@@ -132,8 +133,37 @@ class SalesUI(tk.Frame):
         self.sales_table = ttk.Treeview(self, columns=columns, show="headings", height=8)
         for col in columns:
             self.sales_table.heading(col, text=col)
-            self.sales_table.column(col, width=110)
+            w = 130 if col in ("Rep", "Area", "Customer") else 95 if col == "Date" else 72
+            self.sales_table.column(col, width=w)
         self.sales_table.pack(padx=20, pady=4, fill="x")
+
+        hist_actions = tk.Frame(self, bg="#ecf0f1")
+        hist_actions.pack(padx=20, pady=4, fill="x")
+        tk.Button(
+            hist_actions,
+            text="View / Print receipt",
+            command=self._open_selected_receipt,
+            bg="#8e44ad",
+            fg="white",
+            relief="flat",
+        ).pack(side="left")
+        self.sales_table.bind("<Double-1>", lambda _e: self._open_selected_receipt())
+
+    def _open_selected_receipt(self):
+        selected = self.sales_table.selection()
+        if not selected:
+            messagebox.showinfo("Receipt", "Select a sale in the list first.")
+            return
+        row = self.sales_table.item(selected[0], "values")
+        if not row:
+            return
+        try:
+            sale_id = int(str(row[0]).strip())
+        except (TypeError, ValueError):
+            messagebox.showerror("Receipt", "Could not read sale ID from selection.")
+            return
+        root = self.winfo_toplevel()
+        open_receipt_window(root, sale_id)
 
     def _refresh_dropdowns(self):
         reps = get_all_reps(include_inactive=False)
@@ -170,12 +200,19 @@ class SalesUI(tk.Frame):
         for row in self.sales_table.get_children():
             self.sales_table.delete(row)
 
-        for s in get_all_sales()[-25:]:
-            customer_value = s.customer_id if s.customer_id is not None else "-"
+        for row in get_recent_sales_for_ui(25):
             self.sales_table.insert(
                 "",
                 "end",
-                values=(s.id, s.date, s.rep_id, s.area_id, customer_value, s.quantity, f"{s.net_amount:.2f}"),
+                values=(
+                    row["id"],
+                    row["date"],
+                    row["rep_name"],
+                    row["area_name"],
+                    row["customer_name"],
+                    row["quantity"],
+                    f"{row['net_amount']:.2f}",
+                ),
             )
 
     def _add_line_item(self):
@@ -300,7 +337,8 @@ class SalesUI(tk.Frame):
             messagebox.showerror("Save Failed", str(exc))
             return
 
-        messagebox.showinfo("Saved", f"Bill saved successfully. Sale ID: {sale_id}")
         self._clear_bill()
         self._refresh_dropdowns()
         self._refresh_sales_history()
+        root = self.winfo_toplevel()
+        open_receipt_window(root, sale_id)

@@ -24,7 +24,7 @@ from data.models import Rep, Area, Product
 # ------------------------------
 # 3️⃣ Add sample data
 # ------------------------------
-add_product("Panadol", "GSK", 50)
+add_product("Panadol", "GSK", 50, quantity=500)
 add_rep("Ali")
 add_area("North Zone")
 
@@ -53,7 +53,7 @@ record_sale(
     area_id=area_id,
     product_id=product_id,
     quantity=10,
-    net_amount=500
+    discount=0,
 )
 
 # ------------------------------

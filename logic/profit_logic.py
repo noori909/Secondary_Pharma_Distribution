@@ -1,4 +1,3 @@
-
 from data.database import SessionLocal
 from data.models import Sale
 

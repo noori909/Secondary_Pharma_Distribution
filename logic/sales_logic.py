@@ -1,7 +1,10 @@
-from data.database import SessionLocal
-from data.models import Sale, SaleItem, Product, Rep, Area, Customer
 from datetime import date
 
+from sqlalchemy import and_, or_, exists
+from sqlalchemy.orm import joinedload
+
+from data.database import SessionLocal
+from data.models import Sale, SaleItem, Product, Rep, Area, Customer
 
 def record_bill(rep_id, area_id, items, sale_date=None, customer_id=None):
     """
@@ -143,26 +146,161 @@ def record_sale(
     )
 
 
-def get_all_sales():
+def get_sale_by_id(sale_id):
+    """
+    Load one sale with rep, area, customer, and line items (with product batch/name).
+    Returns a dict suitable for receipt rendering, or None if not found.
+    """
     session = SessionLocal()
-    sales = session.query(Sale).all()
-    session.close()
-    return sales
+    try:
+        sale = session.query(Sale).filter(Sale.id == sale_id).first()
+        if not sale:
+            return None
+
+        customer_name = None
+        if sale.customer_id and sale.customer:
+            customer_name = sale.customer.name
+
+        lines = []
+        for item in sale.items:
+            product = item.product
+            qty = item.quantity
+            unit_net = item.line_total / qty if qty else 0.0
+            lines.append({
+                "product_name": product.name if product else f"Product #{item.product_id}",
+                "batch": (product.batch or "-") if product else "-",
+                "mrp": item.mrp,
+                "trade_price": item.trade_price,
+                "quantity": qty,
+                "discount": item.discount,
+                "unit_net": unit_net,
+                "line_total": item.line_total,
+            })
+
+        if not lines and sale.product and sale.quantity:
+            product = sale.product
+            qty = sale.quantity
+            unit_net = sale.net_amount / qty if qty else 0.0
+            lines.append({
+                "product_name": product.name,
+                "batch": product.batch or "-",
+                "mrp": product.mrp,
+                "trade_price": product.trade_price,
+                "quantity": qty,
+                "discount": sale.discount,
+                "unit_net": unit_net,
+                "line_total": sale.net_amount,
+            })
+
+        return {
+            "sale_id": sale.id,
+            "date": sale.date,
+            "rep_name": sale.rep.name if sale.rep else "",
+            "area_name": sale.area.name if sale.area else "",
+            "customer_name": customer_name,
+            "total_qty": sale.quantity,
+            "total_discount": sale.discount,
+            "net_amount": sale.net_amount,
+            "lines": lines,
+        }
+    finally:
+        session.close()
+
+
+def get_all_sales():
+    """All bills, newest first (stable for UI slices and scripts)."""
+    session = SessionLocal()
+    try:
+        return (
+            session.query(Sale)
+            .order_by(Sale.date.desc(), Sale.id.desc())
+            .all()
+        )
+    finally:
+        session.close()
+
+
+def get_recent_sales_for_ui(limit=25):
+    """
+    Recent bills as plain dicts (safe after session closes).
+    Includes rep / area / customer display names.
+    """
+    session = SessionLocal()
+    try:
+        rows = (
+            session.query(Sale)
+            .options(
+                joinedload(Sale.rep),
+                joinedload(Sale.area),
+                joinedload(Sale.customer),
+            )
+            .order_by(Sale.date.desc(), Sale.id.desc())
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "id": s.id,
+                "date": s.date,
+                "rep_name": s.rep.name if s.rep else "",
+                "area_name": s.area.name if s.area else "",
+                "customer_name": s.customer.name if s.customer else "—",
+                "quantity": s.quantity,
+                "net_amount": s.net_amount,
+            }
+            for s in rows
+        ]
+    finally:
+        session.close()
+
 
 def get_sales_by_rep(rep_id):
     session = SessionLocal()
-    sales = session.query(Sale).filter(Sale.rep_id == rep_id).all()
-    session.close()
-    return sales
+    try:
+        return (
+            session.query(Sale)
+            .filter(Sale.rep_id == rep_id)
+            .order_by(Sale.date.desc(), Sale.id.desc())
+            .all()
+        )
+    finally:
+        session.close()
+
 
 def get_sales_by_area(area_id):
     session = SessionLocal()
-    sales = session.query(Sale).filter(Sale.area_id == area_id).all()
-    session.close()
-    return sales
+    try:
+        return (
+            session.query(Sale)
+            .filter(Sale.area_id == area_id)
+            .order_by(Sale.date.desc(), Sale.id.desc())
+            .all()
+        )
+    finally:
+        session.close()
+
 
 def get_sales_by_product(product_id):
+    """
+    Bills that include this product on any line (SaleItem), or legacy header-only
+    rows where the sale has no line items but Sale.product_id matches.
+    """
     session = SessionLocal()
-    sales = session.query(Sale).filter(Sale.product_id == product_id).all()
-    session.close()
-    return sales
+    try:
+        line_sale_ids = session.query(SaleItem.sale_id).filter(
+            SaleItem.product_id == product_id
+        )
+        has_items = exists().where(SaleItem.sale_id == Sale.id)
+        return (
+            session.query(Sale)
+            .filter(
+                or_(
+                    Sale.id.in_(line_sale_ids),
+                    and_(Sale.product_id == product_id, ~has_items),
+                )
+            )
+            .order_by(Sale.date.desc(), Sale.id.desc())
+            .all()
+        )
+    finally:
+        session.close()

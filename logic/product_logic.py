@@ -31,8 +31,66 @@ def add_product(
     session.close()
 
     
+def get_product_by_id(product_id):
+    session = SessionLocal()
+    try:
+        return session.query(Product).filter(Product.id == product_id).first()
+    finally:
+        session.close()
+
+
 def get_all_products():
     session = SessionLocal()
     products = session.query(Product).all()
     session.close()
     return products
+
+
+def update_product(
+    product_id,
+    name,
+    company,
+    trade_price,
+    mrp,
+    batch=None,
+    formula=None,
+    description=None,
+):
+    if mrp is None:
+        mrp = trade_price
+
+    session = SessionLocal()
+    try:
+        product = session.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            raise ValueError("Product not found")
+
+        product.name = name
+        product.company = company
+        product.trade_price = float(trade_price)
+        product.mrp = float(mrp)
+        product.batch = batch
+        product.formula = formula
+        product.description = description
+
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def set_product_status(product_id, status):
+    session = SessionLocal()
+    try:
+        product = session.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            raise ValueError("Product not found")
+        product.status = status
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

@@ -7,6 +7,8 @@ from ui.reps_ui import RepsUI
 from ui.areas_ui import AreasUI
 from ui.customers_ui import CustomersUI
 from ui.sales_ui import SalesUI
+from ui.reports_ui import ReportsUI
+from ui.stock_ui import StockUI
 
 
 class PharmaApp(tk.Tk):
@@ -32,7 +34,9 @@ class PharmaApp(tk.Tk):
             "Reps": RepsUI,
             "Areas": AreasUI,
             "Customers": CustomersUI,
-            "Sales": SalesUI
+            "Sales": SalesUI,
+            "Stock": StockUI,
+            "Reports": ReportsUI,
         }
 
         for name, screen_class in self.screens.items():

@@ -4,7 +4,9 @@ from sqlalchemy import (
     String,
     Float,
     Date,
-    ForeignKey
+    DateTime,
+    ForeignKey,
+    func,
 )
 from sqlalchemy.orm import relationship
 from data.database import Base
@@ -30,6 +32,7 @@ class Product(Base):
 
     sales = relationship("Sale", back_populates="product")
     sale_items = relationship("SaleItem", back_populates="product")
+    stock_movements = relationship("StockMovement", back_populates="product")
 
 
 class Rep(Base):
@@ -109,4 +112,19 @@ class Bonus(Base):
     bonus_amount = Column(Float, nullable=False)
 
     rep = relationship("Rep", back_populates="bonuses")
+
+
+class StockMovement(Base):
+    """Audit of non-sale stock changes (purchase, damage, expiry, manual correction)."""
+
+    __tablename__ = "stock_movements"
+
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity_delta = Column(Integer, nullable=False)
+    reason = Column(String, nullable=False)
+    note = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+    product = relationship("Product", back_populates="stock_movements")
 

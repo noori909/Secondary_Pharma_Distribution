@@ -1,7 +1,7 @@
 import tkinter as tk
 from logic.profit_logic import calculate_total_profit
 from data.database import SessionLocal
-from data.models import Product, Rep, Area, Sale
+from data.models import Product, Rep, Area, Sale, Customer
 
 
 class Dashboard(tk.Frame):
@@ -33,8 +33,9 @@ class Dashboard(tk.Frame):
             "Total Products": session.query(Product).count(),
             "Total Reps": session.query(Rep).count(),
             "Total Areas": session.query(Area).count(),
-            "Total Sales": session.query(Sale).count(),
-            "Total Profit (8%)": f"{calculate_total_profit():.2f}"
+            "Total Customers": session.query(Customer).count(),
+            "Total Sales (bills)": session.query(Sale).count(),
+            "Total Profit (8%)": f"{calculate_total_profit():.2f}",
         }
 
         session.close()

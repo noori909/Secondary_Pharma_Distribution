@@ -3,33 +3,62 @@ from data.models import Customer
 
 
 def add_customer(name):
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("Name is required")
+
     session = SessionLocal()
-    customer = Customer(name=name)
-    session.add(customer)
-    session.commit()
-    session.close()
+    try:
+        customer = Customer(name=name)
+        session.add(customer)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def update_customer(customer_id, name):
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("Name is required")
+
+    session = SessionLocal()
+    try:
+        customer = session.query(Customer).filter(Customer.id == customer_id).first()
+        if not customer:
+            raise ValueError("Customer not found")
+        customer.name = name
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def set_customer_status(customer_id, status):
     session = SessionLocal()
-    customer = session.query(Customer).filter(Customer.id == customer_id).first()
-
-    if not customer:
+    try:
+        customer = session.query(Customer).filter(Customer.id == customer_id).first()
+        if not customer:
+            raise ValueError("Customer not found")
+        customer.status = status
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
         session.close()
-        raise ValueError("Customer not found")
-
-    customer.status = status
-    session.commit()
-    session.close()
 
 
 def get_all_customers(include_inactive=True):
     session = SessionLocal()
-
-    query = session.query(Customer)
-    if not include_inactive:
-        query = query.filter(Customer.status == "active")
-
-    customers = query.all()
-    session.close()
-    return customers
+    try:
+        query = session.query(Customer)
+        if not include_inactive:
+            query = query.filter(Customer.status == "active")
+        return query.order_by(Customer.name.asc()).all()
+    finally:
+        session.close()
