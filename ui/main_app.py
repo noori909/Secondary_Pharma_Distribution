@@ -53,6 +53,15 @@ class PharmaApp(tk.Tk):
 
         self.current_screen = None
         self.show_screen(Dashboard)  # Show dashboard by default
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        try:
+            from logic.backup_logic import perform_automated_backup
+            perform_automated_backup()
+        except Exception as e:
+            print(f"Backup failed: {e}")
+        self.destroy()
 
     # ---- SHOW SCREEN FUNCTION ----
     def show_screen(self, screen_class):

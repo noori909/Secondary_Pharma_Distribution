@@ -6,7 +6,7 @@ def calculate_total_profit():
     Calculates 8% of all net sales.
     """
     session = SessionLocal()
-    total_net = session.query(Sale).with_entities(Sale.net_amount).all()
+    total_net = session.query(Sale).filter(Sale.payment_status == 'cash').with_entities(Sale.net_amount).all()
     session.close()
 
     # total_net is list of tuples
@@ -19,7 +19,7 @@ def calculate_profit_by_rep(rep_id):
     Calculates 8% of net sales for a given rep.
     """
     session = SessionLocal()
-    sales = session.query(Sale.net_amount).filter(Sale.rep_id == rep_id).all()
+    sales = session.query(Sale.net_amount).filter(Sale.rep_id == rep_id, Sale.payment_status == 'cash').all()
     session.close()
 
     total = sum([x[0] for x in sales])
@@ -31,7 +31,7 @@ def calculate_profit_by_area(area_id):
     Calculates 8% of net sales for a given area.
     """
     session = SessionLocal()
-    sales = session.query(Sale.net_amount).filter(Sale.area_id == area_id).all()
+    sales = session.query(Sale.net_amount).filter(Sale.area_id == area_id, Sale.payment_status == 'cash').all()
     session.close()
 
     total = sum([x[0] for x in sales])

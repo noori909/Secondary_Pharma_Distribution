@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from data.database import SessionLocal
 from data.models import Sale, SaleItem, Product, Rep, Area, Customer
 
-def record_bill(rep_id, area_id, items, sale_date=None, customer_id=None):
+def record_bill(rep_id, area_id, items, sale_date=None, customer_id=None, payment_status="cash"):
     """
     Records a single bill with one Sale header and multiple SaleItem rows.
     items: list[{"product_id": int, "quantity": int, "discount": float}]
@@ -92,7 +92,8 @@ def record_bill(rep_id, area_id, items, sale_date=None, customer_id=None):
             quantity=total_qty,
             discount=total_discount,
             net_amount=total_net,
-            date=sale_date
+            date=sale_date,
+            payment_status=payment_status
         )
         session.add(sale)
         session.flush()
@@ -127,6 +128,7 @@ def record_sale(
     discount=0,
     sale_date=None,
     customer_id=None,
+    payment_status="cash",
 ):
     """
     Records a sale with automatic price calculation.
@@ -143,6 +145,7 @@ def record_sale(
                 "discount": discount,
             }
         ],
+        payment_status=payment_status,
     )
 
 
@@ -198,6 +201,7 @@ def get_sale_by_id(sale_id):
             "rep_name": sale.rep.name if sale.rep else "",
             "area_name": sale.area.name if sale.area else "",
             "customer_name": customer_name,
+            "payment_status": getattr(sale, 'payment_status', 'cash'),
             "total_qty": sale.quantity,
             "total_discount": sale.discount,
             "net_amount": sale.net_amount,
@@ -302,5 +306,38 @@ def get_sales_by_product(product_id):
             .order_by(Sale.date.desc(), Sale.id.desc())
             .all()
         )
+    finally:
+        session.close()
+
+def get_pending_credit_bills():
+    session = SessionLocal()
+    try:
+        sales = session.query(Sale).options(
+            joinedload(Sale.rep),
+            joinedload(Sale.customer)
+        ).filter(Sale.payment_status == 'credit').order_by(Sale.id.desc()).all()
+        result = []
+        for s in sales:
+            result.append({
+                "id": s.id,
+                "date": str(s.date),
+                "rep": s.rep.name if s.rep else "",
+                "customer": s.customer.name if s.customer else "",
+                "net_amount": s.net_amount
+            })
+        return result
+    finally:
+        session.close()
+
+def mark_sale_paid(sale_id):
+    session = SessionLocal()
+    try:
+        sale = session.query(Sale).filter(Sale.id == sale_id).first()
+        if sale:
+            sale.payment_status = "cash"
+            session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()

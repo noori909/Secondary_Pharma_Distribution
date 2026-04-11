@@ -26,6 +26,7 @@ def init_db():
     _add_column_if_missing("products", "description", "VARCHAR")
     _add_column_if_missing("sales", "customer_id", "INTEGER")
     _add_column_if_missing("sales", "discount", "FLOAT DEFAULT 0")
+    _add_column_if_missing("sales", "payment_status", "VARCHAR DEFAULT 'cash'")
 
 if __name__ == "__main__":
     init_db()

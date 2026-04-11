@@ -46,8 +46,13 @@ class SalesUI(tk.Frame):
         self.area_combo.grid(row=0, column=3, padx=5)
 
         tk.Label(header, text="Customer (optional)", bg="#ecf0f1").grid(row=0, column=4, padx=5, sticky="w")
-        self.customer_combo = SearchableCombobox(header, width=30)
+        self.customer_combo = SearchableCombobox(header, width=20)
         self.customer_combo.grid(row=0, column=5, padx=5)
+        
+        tk.Label(header, text="Payment", bg="#ecf0f1").grid(row=0, column=6, padx=5, sticky="w")
+        self.payment_combo = ttk.Combobox(header, width=8, state="readonly", values=["Cash", "Credit"])
+        self.payment_combo.current(0)
+        self.payment_combo.grid(row=0, column=7, padx=5)
 
     def _build_item_entry(self):
         item_box = tk.LabelFrame(self, text="Add Bill Item", bg="#ecf0f1")
@@ -331,12 +336,15 @@ class SalesUI(tk.Frame):
             for item in self.bill_items
         ]
 
+        payment_choice = self.payment_combo.get().lower()
+
         try:
             sale_id = record_bill(
                 rep_id=rep_id,
                 area_id=area_id,
                 customer_id=customer_id,
                 items=payload_items,
+                payment_status=payment_choice,
             )
         except ValueError as exc:
             messagebox.showerror("Save Failed", str(exc))

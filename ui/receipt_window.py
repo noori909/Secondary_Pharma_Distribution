@@ -18,7 +18,11 @@ from logic.sales_logic import get_sale_by_id
 RECEIPT_DISCLAIMER = (
     "This receipt is issued for distribution records only. "
     "Verify batch numbers and expiry on physical packaging before use. "
-    "No warranty beyond manufacturer terms."
+    "No warranty beyond manufacturer terms.<br/><br/>"
+    "Warranty Under section 23(1) of the drug act 1976, I Nazir Ahmed being a person resident in Pakistan, "
+    "carrying business at Ramzan plaza, Patail Bagh Quetta under the name of New Quetta Surgical and Medicine "
+    "being an authorized distributor do hereby give this warranty that drugs described in this invoice/bill as sold "
+    "by us do not contrivance in any way the provisions of section 23 of drug act 1976."
 )
 
 
@@ -115,10 +119,12 @@ def generate_receipt_pdf(data, path):
     
     title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=1)
     subtitle_style = ParagraphStyle('Subtitle', parent=styles['Heading3'], alignment=1)
+    contact_style = ParagraphStyle('Contact', parent=styles['Normal'], alignment=2, textColor=colors.gray)
     
     elements = []
     elements.append(Paragraph("NEW QUETTA SURGICAL & MEDICINE DISTRIBUTOR", title_style))
     elements.append(Paragraph("SALES RECEIPT", subtitle_style))
+    elements.append(Paragraph("newquettamedicalandsurgical@gmail.com<br/>+9233-42045896", contact_style))
     elements.append(Spacer(1, 0.2 * inch))
     
     info_data = [
@@ -167,9 +173,11 @@ def generate_receipt_pdf(data, path):
     elements.append(t)
     elements.append(Spacer(1, 0.2 * inch))
     
+    payment_status = str(data.get('payment_status', 'cash')).upper()
     summary_data = [
         ["", "Total discount:", f"{data['total_discount']:.2f}"],
-        ["", "BILL TOTAL:", f"{data['net_amount']:.2f}"]
+        ["", "BILL TOTAL:", f"{data['net_amount']:.2f}"],
+        ["", "Payment Terms:", payment_status]
     ]
     sum_t = Table(summary_data, colWidths=[4.8*inch, 1.5*inch, 1*inch])
     sum_t.setStyle(TableStyle([
@@ -180,6 +188,9 @@ def generate_receipt_pdf(data, path):
     elements.append(sum_t)
     elements.append(Spacer(1, 0.4 * inch))
     
+    address_style = ParagraphStyle('Address', parent=styles['Normal'], alignment=1, spaceAfter=10)
+    elements.append(Paragraph("<b>Quetta Surgical & Medicine Distributors, Ramzan Plaza near Saleem Complex Quetta.</b>", address_style))
+    elements.append(Spacer(1, 0.2 * inch))
     elements.append(Paragraph(RECEIPT_DISCLAIMER, styles["Normal"]))
     doc.build(elements)
 

@@ -79,6 +79,7 @@ class Sale(Base):
     quantity = Column(Integer, nullable=False)
     discount = Column(Float, default=0.0)
     net_amount = Column(Float, nullable=False)
+    payment_status = Column(String, default="cash")
 
     rep = relationship("Rep", back_populates="sales")
     area = relationship("Area", back_populates="sales")

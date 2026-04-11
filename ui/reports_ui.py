@@ -1,6 +1,10 @@
 import csv
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
 from ui.widgets import SearchableCombobox
 
 from logic.area_logic import get_all_areas
@@ -49,8 +53,8 @@ class ReportsUI(tk.Frame):
         self._build_filters()
         self._build_summary()
         self._build_stock_summary()
-        self._build_mode_and_table()
         self._build_export()
+        self._build_mode_and_table()
         self._load_filter_options()
         self._run_report()
 
@@ -107,7 +111,8 @@ class ReportsUI(tk.Frame):
             bg="#2980b9",
             fg="white",
             relief="flat",
-        ).grid(row=0, column=4, rowspan=4, padx=12, pady=4, sticky="ns")
+            width=20
+        ).grid(row=3, column=3, columnspan=2, padx=12, pady=4, sticky="e")
 
     def _build_summary(self):
         self.summary_frame = tk.LabelFrame(self, text="Totals (filtered)", bg="#ecf0f1")
@@ -215,7 +220,7 @@ class ReportsUI(tk.Frame):
 
     def _build_export(self):
         row = tk.Frame(self, bg="#ecf0f1")
-        row.pack(fill="x", padx=16, pady=8)
+        row.pack(side="bottom", fill="x", padx=16, pady=8)
         tk.Button(
             row,
             text="Export current view to CSV…",
@@ -223,7 +228,18 @@ class ReportsUI(tk.Frame):
             bg="#16a085",
             fg="white",
             relief="flat",
+            width=26
         ).pack(side="left")
+        
+        tk.Button(
+            row,
+            text="Export current view to PDF…",
+            command=self._export_pdf,
+            bg="#8e44ad",
+            fg="white",
+            relief="flat",
+            width=26
+        ).pack(side="left", padx=10)
 
     def _load_filter_options(self):
         reps = get_all_reps(include_inactive=False)
@@ -366,6 +382,8 @@ class ReportsUI(tk.Frame):
             widths = (50, 85, 90, 90, 100, 120, 80, 70, 45, 55, 75, 75)
             self._ensure_tree(cols, heads, widths)
             for r in self._detail_rows:
+                base = r["trade_price"] * r["quantity"]
+                pct = (r["line_discount"] / base * 100) if base > 0 else 0
                 self.tree.insert(
                     "",
                     "end",
@@ -379,7 +397,7 @@ class ReportsUI(tk.Frame):
                         r["company"],
                         r["batch"],
                         r["quantity"],
-                        f"{r['line_discount']:.2f}",
+                        f"{pct:.2f}%",
                         f"{r['line_net']:.2f}",
                         f"{r['sale_net_amount']:.2f}",
                     ),
@@ -393,6 +411,8 @@ class ReportsUI(tk.Frame):
             widths = (140, 55, 55, 80, 90, 90)
             self._ensure_tree(cols, heads, widths)
             for r in rows:
+                base = r['net_sales'] + r['line_discount']
+                pct = (r['line_discount'] / base * 100) if base > 0 else 0
                 self.tree.insert(
                     "",
                     "end",
@@ -400,7 +420,7 @@ class ReportsUI(tk.Frame):
                         r["rep_name"],
                         r["bills"],
                         r["quantity"],
-                        f"{r['line_discount']:.2f}",
+                        f"{pct:.2f}%",
                         f"{r['net_sales']:.2f}",
                         f"{r['benefit_8pct']:.2f}",
                     ),
@@ -414,6 +434,8 @@ class ReportsUI(tk.Frame):
             widths = (140, 55, 55, 80, 90, 90)
             self._ensure_tree(cols, heads, widths)
             for r in rows:
+                base = r['net_sales'] + r['line_discount']
+                pct = (r['line_discount'] / base * 100) if base > 0 else 0
                 self.tree.insert(
                     "",
                     "end",
@@ -421,7 +443,7 @@ class ReportsUI(tk.Frame):
                         r["area_name"],
                         r["bills"],
                         r["quantity"],
-                        f"{r['line_discount']:.2f}",
+                        f"{pct:.2f}%",
                         f"{r['net_sales']:.2f}",
                         f"{r['benefit_8pct']:.2f}",
                     ),
@@ -443,6 +465,8 @@ class ReportsUI(tk.Frame):
             widths = (160, 90, 55, 55, 75, 85, 85)
             self._ensure_tree(cols, heads, widths)
             for r in rows:
+                base = r['net_sales'] + r['line_discount']
+                pct = (r['line_discount'] / base * 100) if base > 0 else 0
                 self.tree.insert(
                     "",
                     "end",
@@ -451,7 +475,7 @@ class ReportsUI(tk.Frame):
                         r["company"],
                         r["bills"],
                         r["quantity"],
-                        f"{r['line_discount']:.2f}",
+                        f"{pct:.2f}%",
                         f"{r['net_sales']:.2f}",
                         f"{r['benefit_8pct']:.2f}",
                     ),
@@ -465,6 +489,8 @@ class ReportsUI(tk.Frame):
             widths = (160, 55, 55, 80, 90, 90)
             self._ensure_tree(cols, heads, widths)
             for r in rows:
+                base = r['net_sales'] + r['line_discount']
+                pct = (r['line_discount'] / base * 100) if base > 0 else 0
                 self.tree.insert(
                     "",
                     "end",
@@ -472,7 +498,7 @@ class ReportsUI(tk.Frame):
                         r["customer_name"],
                         r["bills"],
                         r["quantity"],
-                        f"{r['line_discount']:.2f}",
+                        f"{pct:.2f}%",
                         f"{r['net_sales']:.2f}",
                         f"{r['benefit_8pct']:.2f}",
                     ),
@@ -620,4 +646,51 @@ class ReportsUI(tk.Frame):
 
             messagebox.showinfo("Export", f"Saved:\n{path}")
         except OSError as exc:
+            messagebox.showerror("Export failed", str(exc))
+
+    def _export_pdf(self):
+        mode = self._current_mode_key()
+        if mode != "stock" and not self._detail_rows:
+            messagebox.showinfo("Export", "Run a report first.")
+            return
+
+        path = filedialog.asksaveasfilename(
+            parent=self,
+            defaultextension=".pdf",
+            filetypes=[("PDF Documents", "*.pdf"), ("All", "*.*")],
+            initialfile=f"report_{mode}.pdf",
+        )
+        if not path:
+            return
+
+        try:
+            doc = SimpleDocTemplate(path, pagesize=landscape(A4), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            elements.append(Paragraph(f"Pharma System Report — {mode.upper()}", styles['Heading1']))
+            elements.append(Spacer(1, 10))
+            
+            headers = [self.tree.heading(c)["text"] for c in self.tree["columns"]]
+            data = [headers]
+            for child in self.tree.get_children():
+                data.append([str(v) for v in self.tree.item(child)["values"]])
+            
+            col_widths = [(700 / len(headers))] * len(headers)
+            t = Table(data, colWidths=col_widths, repeatRows=1)
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2980b9")),
+                ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0,0), (-1,0), 10),
+                ('BOTTOMPADDING', (0,0), (-1,0), 6),
+                ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
+                ('FONTSIZE', (0,1), (-1,-1), 8),
+                ('GRID', (0,0), (-1,-1), 1, colors.HexColor("#bdc3c7"))
+            ]))
+            elements.append(t)
+            doc.build(elements)
+            messagebox.showinfo("Export", f"Saved PDF:\n{path}")
+        except Exception as exc:
             messagebox.showerror("Export failed", str(exc))
