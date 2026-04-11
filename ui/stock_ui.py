@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+from ui.widgets import SearchableCombobox
 
 from logic.product_logic import get_all_products
 from logic.stock_logic import get_recent_movements, record_adjustment, record_purchase
@@ -21,7 +22,7 @@ class StockUI(tk.Frame):
 
         sel = tk.LabelFrame(self, text="Product", bg="#ecf0f1")
         sel.pack(fill="x", padx=16, pady=6)
-        self.product_combo = ttk.Combobox(sel, width=55, state="readonly")
+        self.product_combo = SearchableCombobox(sel, width=55)
         self.product_combo.pack(padx=8, pady=8, anchor="w")
         tk.Button(sel, text="Refresh list", command=self._load_products).pack(
             padx=8, pady=(0, 8), anchor="w"
@@ -103,7 +104,7 @@ class StockUI(tk.Frame):
             f"{p.id} — {p.name} (stock: {p.quantity_in_stock})": p.id for p in products
         }
         vals = list(self.product_map.keys())
-        self.product_combo["values"] = vals
+        self.product_combo.set_values(vals)
         if vals:
             self.product_combo.current(0)
         else:

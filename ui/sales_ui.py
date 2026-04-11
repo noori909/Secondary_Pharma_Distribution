@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+from ui.widgets import SearchableCombobox
 from logic.sales_logic import get_recent_sales_for_ui, record_bill
 from logic.rep_logic import get_all_reps
 from logic.area_logic import get_all_areas
@@ -37,15 +38,15 @@ class SalesUI(tk.Frame):
         header.pack(padx=20, pady=5, fill="x")
 
         tk.Label(header, text="Rep", bg="#ecf0f1").grid(row=0, column=0, padx=5, sticky="w")
-        self.rep_combo = ttk.Combobox(header, width=28, state="readonly")
+        self.rep_combo = SearchableCombobox(header, width=28)
         self.rep_combo.grid(row=0, column=1, padx=5)
 
         tk.Label(header, text="Area", bg="#ecf0f1").grid(row=0, column=2, padx=5, sticky="w")
-        self.area_combo = ttk.Combobox(header, width=28, state="readonly")
+        self.area_combo = SearchableCombobox(header, width=28)
         self.area_combo.grid(row=0, column=3, padx=5)
 
         tk.Label(header, text="Customer (optional)", bg="#ecf0f1").grid(row=0, column=4, padx=5, sticky="w")
-        self.customer_combo = ttk.Combobox(header, width=30, state="readonly")
+        self.customer_combo = SearchableCombobox(header, width=30)
         self.customer_combo.grid(row=0, column=5, padx=5)
 
     def _build_item_entry(self):
@@ -53,14 +54,14 @@ class SalesUI(tk.Frame):
         item_box.pack(padx=20, pady=8, fill="x")
 
         tk.Label(item_box, text="Product", bg="#ecf0f1").grid(row=0, column=0, padx=5, pady=8)
-        self.product_combo = ttk.Combobox(item_box, width=40, state="readonly")
+        self.product_combo = SearchableCombobox(item_box, width=40)
         self.product_combo.grid(row=0, column=1, padx=5)
 
         tk.Label(item_box, text="Qty", bg="#ecf0f1").grid(row=0, column=2, padx=5)
         self.qty_entry = tk.Entry(item_box, width=8)
         self.qty_entry.grid(row=0, column=3, padx=5)
 
-        tk.Label(item_box, text="Discount", bg="#ecf0f1").grid(row=0, column=4, padx=5)
+        tk.Label(item_box, text="Discount (%)", bg="#ecf0f1").grid(row=0, column=4, padx=5)
         self.discount_entry = tk.Entry(item_box, width=10)
         self.discount_entry.insert(0, "0")
         self.discount_entry.grid(row=0, column=5, padx=5)
@@ -168,13 +169,13 @@ class SalesUI(tk.Frame):
     def _refresh_dropdowns(self):
         reps = get_all_reps(include_inactive=False)
         self.rep_map = {f"{r.id} - {r.name}": r.id for r in reps}
-        self.rep_combo["values"] = list(self.rep_map.keys())
+        self.rep_combo.set_values(list(self.rep_map.keys()))
         if reps:
             self.rep_combo.current(0)
 
         areas = get_all_areas(include_inactive=False)
         self.area_map = {f"{a.id} - {a.name}": a.id for a in areas}
-        self.area_combo["values"] = list(self.area_map.keys())
+        self.area_combo.set_values(list(self.area_map.keys()))
         if areas:
             self.area_combo.current(0)
 
@@ -185,14 +186,14 @@ class SalesUI(tk.Frame):
             label = f"{c.id} - {c.name}"
             customer_values.append(label)
             self.customer_map[label] = c.id
-        self.customer_combo["values"] = customer_values
+        self.customer_combo.set_values(customer_values)
         self.customer_combo.current(0)
 
         products = [p for p in get_all_products() if p.status == "active" and p.quantity_in_stock > 0]
         self.product_map = {
             f"{p.id} - {p.name} (Stock: {p.quantity_in_stock})": p for p in products
         }
-        self.product_combo["values"] = list(self.product_map.keys())
+        self.product_combo.set_values(list(self.product_map.keys()))
         if products:
             self.product_combo.current(0)
 
@@ -223,7 +224,7 @@ class SalesUI(tk.Frame):
 
         try:
             quantity = int(self.qty_entry.get().strip())
-            discount = float(self.discount_entry.get().strip() or "0")
+            discount_pct = float(self.discount_entry.get().strip() or "0")
         except ValueError:
             messagebox.showerror("Validation Error", "Quantity must be integer and discount must be number.")
             return
@@ -231,8 +232,8 @@ class SalesUI(tk.Frame):
         if quantity <= 0:
             messagebox.showerror("Validation Error", "Quantity must be positive.")
             return
-        if discount < 0:
-            messagebox.showerror("Validation Error", "Discount cannot be negative.")
+        if discount_pct < 0 or discount_pct >= 100:
+            messagebox.showerror("Validation Error", "Discount percentage must be between 0 and 100.")
             return
 
         product = self.product_map.get(product_label)
@@ -240,7 +241,10 @@ class SalesUI(tk.Frame):
             messagebox.showerror("Validation Error", "Invalid product selected.")
             return
 
-        line_total = (product.trade_price * quantity) - discount
+        base_total = product.trade_price * quantity
+        discount_amount = base_total * (discount_pct / 100.0)
+        line_total = base_total - discount_amount
+
         if line_total <= 0:
             messagebox.showerror("Validation Error", "Discount is too high for this line.")
             return
@@ -251,7 +255,8 @@ class SalesUI(tk.Frame):
             "trade_price": product.trade_price,
             "mrp": product.mrp,
             "quantity": quantity,
-            "discount": discount,
+            "discount": discount_amount,
+            "discount_pct": discount_pct,
             "line_total": line_total,
         }
         self.bill_items.append(item)
@@ -277,7 +282,7 @@ class SalesUI(tk.Frame):
                     f"{item['trade_price']:.2f}",
                     f"{item['mrp']:.2f}",
                     item["quantity"],
-                    f"{item['discount']:.2f}",
+                    f"{item['discount']:.2f} ({item.get('discount_pct', 0):g}%)",
                     f"{item['line_total']:.2f}",
                 ),
             )

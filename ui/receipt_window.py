@@ -7,6 +7,12 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, filedialog
 
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+
 from logic.sales_logic import get_sale_by_id
 
 RECEIPT_DISCLAIMER = (
@@ -20,7 +26,8 @@ def format_receipt_text(data):
     """Plain-text receipt body from get_sale_by_id() dict."""
     lines = []
     w = 52
-    lines.append("PHARMA DISTRIBUTION — SALES RECEIPT".center(w))
+    lines.append("NEW QUETTA SURGICAL & MEDICINE DISTRIBUTOR".center(w))
+    lines.append("SALES RECEIPT".center(w))
     lines.append("=" * w)
     lines.append(f"Bill No:     {data['sale_id']}")
     lines.append(f"Sale Date:   {data['date']}")
@@ -32,17 +39,21 @@ def format_receipt_text(data):
     lines.append("=" * w)
 
     for row in data["lines"]:
+        base_amt = row['trade_price'] * row['quantity']
+        pct = (row['discount'] / base_amt * 100) if base_amt > 0 else 0
+        discount_str = f"{row['discount']:.2f} ({pct:g}%)" if pct > 0 else f"{row['discount']:.2f}"
+        
         lines.append(f"{row['product_name']}  (batch: {row['batch']})")
         lines.append(
             f"  MRP {row['mrp']:.2f}  TP {row['trade_price']:.2f}  "
-            f"Qty {row['quantity']}  Line disc {row['discount']:.2f}"
+            f"Qty {row['quantity']}  Discount {discount_str}"
         )
         lines.append(
             f"  Net unit {row['unit_net']:.2f}  Line total {row['line_total']:.2f}"
         )
         lines.append("-" * w)
 
-    lines.append(f"Total line discounts:     {data['total_discount']:.2f}")
+    lines.append(f"Total discount:           {data['total_discount']:.2f}")
     lines.append(f"BILL TOTAL:               {data['net_amount']:.2f}")
     lines.append("=" * w)
     lines.append(RECEIPT_DISCLAIMER)
@@ -98,6 +109,96 @@ def print_receipt_text(text, parent=None):
         raise
 
 
+def generate_receipt_pdf(data, path):
+    doc = SimpleDocTemplate(path, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=1)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Heading3'], alignment=1)
+    
+    elements = []
+    elements.append(Paragraph("NEW QUETTA SURGICAL & MEDICINE DISTRIBUTOR", title_style))
+    elements.append(Paragraph("SALES RECEIPT", subtitle_style))
+    elements.append(Spacer(1, 0.2 * inch))
+    
+    info_data = [
+        [f"Bill No: {data['sale_id']}", f"Sale Date: {data['date']}"],
+        [f"Rep: {data['rep_name']}", f"Area: {data['area_name']}"],
+        [f"Customer: {data.get('customer_name') or '—'}", f"Issued: {datetime.now().strftime('%Y-%m-%d %H:%M')}"]
+    ]
+    info_table = Table(info_data, colWidths=[3*inch, 3*inch])
+    info_table.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,0), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 0.2 * inch))
+    
+    table_data = [["Product", "Batch", "MRP", "TP", "Qty", "Discount", "Net Unit", "Total"]]
+    for row in data["lines"]:
+        base_amt = row['trade_price'] * row['quantity']
+        pct = (row['discount'] / base_amt * 100) if base_amt > 0 else 0
+        discount_str = f"{row['discount']:.2f} ({pct:g}%)" if pct > 0 else f"{row['discount']:.2f}"
+        table_data.append([
+            row['product_name'][:30],
+            row['batch'],
+            f"{row['mrp']:.2f}",
+            f"{row['trade_price']:.2f}",
+            str(row['quantity']),
+            discount_str,
+            f"{row['unit_net']:.2f}",
+            f"{row['line_total']:.2f}"
+        ])
+        
+    t = Table(table_data, colWidths=[2.1*inch, 0.8*inch, 0.6*inch, 0.6*inch, 0.4*inch, 1.2*inch, 0.7*inch, 0.9*inch])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2c3e50")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('ALIGN', (2,0), (-1,-1), 'RIGHT'),
+        ('ALIGN', (0,0), (1,-1), 'LEFT'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 10),
+        ('BOTTOMPADDING', (0,0), (-1,0), 8),
+        ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,1), (-1,-1), 9),
+        ('GRID', (0,0), (-1,-1), 1, colors.black)
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 0.2 * inch))
+    
+    summary_data = [
+        ["", "Total discount:", f"{data['total_discount']:.2f}"],
+        ["", "BILL TOTAL:", f"{data['net_amount']:.2f}"]
+    ]
+    sum_t = Table(summary_data, colWidths=[4.8*inch, 1.5*inch, 1*inch])
+    sum_t.setStyle(TableStyle([
+        ('ALIGN', (1,0), (-1,-1), 'RIGHT'),
+        ('FONTNAME', (1,1), (-1,1), 'Helvetica-Bold'),
+        ('FONTSIZE', (1,1), (-1,1), 11),
+    ]))
+    elements.append(sum_t)
+    elements.append(Spacer(1, 0.4 * inch))
+    
+    elements.append(Paragraph(RECEIPT_DISCLAIMER, styles["Normal"]))
+    doc.build(elements)
+
+
+def print_receipt_pdf(data, parent=None):
+    fd, path = tempfile.mkstemp(suffix=".pdf", prefix="pharma_receipt_")
+    os.close(fd)
+    try:
+        generate_receipt_pdf(data, path)
+        if platform.system() == "Windows":
+            os.startfile(path, "print")
+            _remove_later(path)
+        else:
+            if parent:
+                messagebox.showinfo("Print", "Use Save copy, then print.", parent=parent)
+    except Exception as exc:
+        messagebox.showerror("Print failed", str(exc), parent=parent)
+
+
 def open_receipt_window(parent, sale_id):
     """Show receipt UI for sale_id. Returns True if window was opened."""
     data = get_sale_by_id(sale_id)
@@ -112,6 +213,7 @@ class ReceiptWindow(tk.Toplevel):
     def __init__(self, parent, sale_id, data):
         super().__init__(parent)
         self._sale_id = sale_id
+        self._data = data
         self.title(f"Receipt — Sale #{sale_id}")
         self.geometry("520x640")
         self.minsize(400, 400)
@@ -161,22 +263,21 @@ class ReceiptWindow(tk.Toplevel):
 
     def _on_print(self):
         try:
-            print_receipt_text(self._text_body, parent=self)
+            print_receipt_pdf(self._data, parent=self)
         except OSError as exc:
             messagebox.showerror("Print failed", str(exc), parent=self)
 
     def _on_save(self):
         path = filedialog.asksaveasfilename(
             parent=self,
-            defaultextension=".txt",
-            filetypes=[("Text", "*.txt"), ("All", "*.*")],
-            initialfile=f"receipt_sale_{self._sale_id}.txt",
+            defaultextension=".pdf",
+            filetypes=[("PDF Documents", "*.pdf"), ("All", "*.*")],
+            initialfile=f"receipt_sale_{self._sale_id}.pdf",
         )
         if not path:
             return
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(self._text_body)
+            generate_receipt_pdf(self._data, path)
             messagebox.showinfo("Saved", f"Receipt saved to:\n{path}", parent=self)
-        except OSError as exc:
+        except Exception as exc:
             messagebox.showerror("Save failed", str(exc), parent=self)

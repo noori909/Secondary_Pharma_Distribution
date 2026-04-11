@@ -1,6 +1,7 @@
 import csv
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+from ui.widgets import SearchableCombobox
 
 from logic.area_logic import get_all_areas
 from logic.customer_logic import get_all_customers
@@ -72,25 +73,25 @@ class ReportsUI(tk.Frame):
         tk.Label(box, text="Rep", bg="#ecf0f1").grid(
             row=1, column=0, padx=4, pady=4, sticky="w"
         )
-        self.rep_combo = ttk.Combobox(box, width=22, state="readonly")
+        self.rep_combo = SearchableCombobox(box, width=22)
         self.rep_combo.grid(row=1, column=1, padx=4, pady=4)
 
         tk.Label(box, text="Area", bg="#ecf0f1").grid(
             row=1, column=2, padx=4, pady=4, sticky="w"
         )
-        self.area_combo = ttk.Combobox(box, width=22, state="readonly")
+        self.area_combo = SearchableCombobox(box, width=22)
         self.area_combo.grid(row=1, column=3, padx=4, pady=4)
 
         tk.Label(box, text="Product", bg="#ecf0f1").grid(
             row=2, column=0, padx=4, pady=4, sticky="w"
         )
-        self.product_combo = ttk.Combobox(box, width=36, state="readonly")
+        self.product_combo = SearchableCombobox(box, width=36)
         self.product_combo.grid(row=2, column=1, columnspan=2, padx=4, pady=4, sticky="we")
 
         tk.Label(box, text="Customer", bg="#ecf0f1").grid(
             row=2, column=3, padx=4, pady=4, sticky="w"
         )
-        self.customer_combo = ttk.Combobox(box, width=24, state="readonly")
+        self.customer_combo = SearchableCombobox(box, width=24)
         self.customer_combo.grid(row=2, column=4, padx=4, pady=4)
 
         tk.Label(box, text="Stock reason", bg="#ecf0f1").grid(
@@ -232,7 +233,7 @@ class ReportsUI(tk.Frame):
             label = f"{r.id} — {r.name}"
             rep_vals.append(label)
             self.rep_map[label] = r.id
-        self.rep_combo["values"] = rep_vals
+        self.rep_combo.set_values(rep_vals)
         self.rep_combo.current(0)
 
         areas = get_all_areas(include_inactive=False)
@@ -242,7 +243,7 @@ class ReportsUI(tk.Frame):
             label = f"{a.id} — {a.name}"
             area_vals.append(label)
             self.area_map[label] = a.id
-        self.area_combo["values"] = area_vals
+        self.area_combo.set_values(area_vals)
         self.area_combo.current(0)
 
         products = get_all_products()
@@ -252,7 +253,7 @@ class ReportsUI(tk.Frame):
             label = f"{p.id} — {p.name}"
             prod_vals.append(label)
             self.product_map[label] = p.id
-        self.product_combo["values"] = prod_vals
+        self.product_combo.set_values(prod_vals)
         self.product_combo.current(0)
 
         customers = get_all_customers(include_inactive=False)
@@ -262,7 +263,7 @@ class ReportsUI(tk.Frame):
             label = f"{c.id} — {c.name}"
             cust_vals.append(label)
             self.customer_map[label] = c.id
-        self.customer_combo["values"] = cust_vals
+        self.customer_combo.set_values(cust_vals)
         self.customer_combo.current(0)
 
         self.reason_map = {
