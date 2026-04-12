@@ -1,4 +1,5 @@
 import tkinter as tk
+import threading
 
 # Import all screens
 from ui.dashboard import Dashboard
@@ -55,13 +56,43 @@ class PharmaApp(tk.Tk):
         self.show_screen(Dashboard)  # Show dashboard by default
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-    def on_closing(self):
+        # Start 10 PM daily backup + email scheduler in background
         try:
-            from logic.backup_logic import perform_automated_backup
-            perform_automated_backup()
+            from services.scheduler import start_scheduler
+            start_scheduler()
         except Exception as e:
-            print(f"Backup failed: {e}")
-        self.destroy()
+            print(f"Scheduler failed to start: {e}")
+
+    def on_closing(self):
+        """Show a status message and perform backup before closing."""
+        # Create a tiny status window
+        status_win = tk.Toplevel(self)
+        status_win.title("Status")
+        status_win.geometry("300x100")
+        # Center it
+        x = self.winfo_x() + (self.winfo_width() // 2) - 150
+        y = self.winfo_y() + (self.winfo_height() // 2) - 50
+        status_win.geometry(f"+{x}+{y}")
+        status_win.resizable(False, False)
+        status_win.overrideredirect(True) # Remove borders
+        
+        tk.Label(status_win, text="Performing End-of-Day Backup...", font=("Arial", 10, "bold"), pady=10).pack()
+        tk.Label(status_win, text="Please wait — syncing to cloud...", font=("Arial", 9)).pack()
+        
+        status_win.update() # Force drawing
+        self.withdraw()     # Hide main window
+
+        def _do_work():
+            try:
+                from logic.backup_logic import perform_automated_backup
+                perform_automated_backup()
+            except Exception as e:
+                print(f"Final backup failed: {e}")
+            finally:
+                self.quit() # Stop the mainloop
+
+        # Run in thread so the status window can stay 'alive' (even though it's not interactive)
+        threading.Thread(target=_do_work, daemon=False).start()
 
     # ---- SHOW SCREEN FUNCTION ----
     def show_screen(self, screen_class):

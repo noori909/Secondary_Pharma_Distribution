@@ -1,5 +1,25 @@
+# Environments
 venv/
+.env
+
+# Python 
 __pycache__/
 *.pyc
+
+# Database
 pharma.db
-.env
+
+# --- SENSITIVE CREDENTIALS (CRITICAL: DO NOT REMOVE) ---
+# These files contain your Google account access. 
+# They must NEVER be pushed to a public GitHub repo.
+*.json
+!requirements.txt # (Ensure we don't accidentally ignore package lists)
+
+# Build & EXE Artifacts
+build/
+dist/
+*.spec
+exe_logo.ico
+
+# Local Backups
+backups/
