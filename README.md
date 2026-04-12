@@ -1,7 +1,7 @@
-# Quetta Pharma Distribution System 💊
+# Quetta Pharma Distribution System
 A robust, enterprise-grade management solution specifically engineered for **Secondary Pharmaceutical Distributors**. This system streamlines inventory tracking, credit-based sales, automated cloud-security, and high-precision financial reporting.
 ---
-## 🏗️ The 2ndry Distribution Business Logic
+## The 2ndry Distribution Business Logic
 Unlike standard retail software, this system is architected to handle the complex margin structures of a **Secondary Pharma Distributor**:
 *   **Pricelist Logic (TP Calculation)**: The system automatically maintains companies' instructed margins. Goods are tracked by **MRP** (Maximum Retail Price), but the **TP** (Trade Price) is locked at **MRP - 15%**.
 *   **Variable Discounting**: It handles specialized customer-tiering. While the company provides the base TP, distributors can apply further **bonuses and discounts** (e.g., 0%, 4%, 7%, 12%) based on specific customer volume or company-mandated targets.
@@ -26,7 +26,7 @@ The application is delivered as a **portable Windows Executable (.exe)**.
 *   **Smart AppData**: Stores all databases and backups in the Windows `%APPDATA%` directory to avoid file-permission errors.
 *   **OAuth Security**: Uses official Google OAuth2 for cloud syncing. Authenticates once per machine and runs silently thereafter.
 ---
-## 📂 Project Structure
+## Project Structure
 ```text
 PharmaProject/
 ├── main.py                 # Entry point (Tkinter Mainloop)
@@ -49,7 +49,7 @@ PharmaProject/
     └── reports_ui.py       # Data filtering & PDF exporting
 ```
 ---
-## 🛠️ Technology Stack
+## Technology Stack
 *   **Language**: Python 3.x
 *   **UI Framework**: Tkinter (Stylized Modern Dark/Light Theme)
 *   **ORM**: SQLAlchemy (SQLite Engine)
