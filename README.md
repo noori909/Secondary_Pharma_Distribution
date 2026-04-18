@@ -79,10 +79,10 @@ PharmaProject/
 Designed with a focus on simplicity, speed, and reliability for warehouse environments. Built to ensure that even if the local computer fails, the business records remain safely immortalized in the cloud.
 
 ## Future Updates
-• Cloud Integration 
-• updated email with products and reps info
-• company classification 
-• more flexibility in pricing items even on the dashboard
-• products vise profit reports
-• Profit placing on companies (hard coded for each)
-• a dashboard app for the reps to place their orders with discounts ready to be printed
+* Cloud Integration 
+* updated email with products and reps info
+* company classification 
+* more flexibility in pricing items even on the dashboard
+* products vise profit reports
+* Profit placing on companies (hard coded for each)
+* a dashboard app for the reps to place their orders with discounts ready to be printed
