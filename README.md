@@ -80,9 +80,10 @@ Designed with a focus on simplicity, speed, and reliability for warehouse enviro
 
 ## Future Updates
 * Cloud Integration 
-* updated email with products and reps info
-* company classification 
-* more flexibility in pricing items even on the dashboard
-* products vise profit reports
+* Updated email with products and reps info
+* Company classification 
+* More flexibility in pricing items even on the dashboard
+* Products vise profit reports
 * Profit placing on companies (hard coded for each)
-* a dashboard app for the reps to place their orders with discounts ready to be printed
+* A dashboard app for the reps to place their orders with discounts ready to be printed
+* An editable email list to send the reports to Bosses, new emails can be added and unused alcan be deleted directly from the app.
