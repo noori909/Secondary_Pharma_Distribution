@@ -10,11 +10,12 @@ from data.database import SessionLocal
 from data.models import Sale
 
 # ── Credentials ────────────────────────────────────────────────────────────
-SENDER_EMAIL    = "newquettamedicalandsurgical@gmail.com"
-SENDER_PASSWORD = "cdnh ctfc eoqk tikj"
-RECEIVER_EMAIL  = "raeesnomanbaloch@gmail.com"
-CC_EMAILS       = ["vitaleaseofficial@gmail.com", "dr.maqbooljabbar@gmail.com"]
-
+/*
+SENDER_EMAIL    = 
+SENDER_PASSWORD = 
+RECEIVER_EMAIL  = 
+CC_EMAILS       = 
+*/
 
 def send_daily_report():
     """Compile today's sales stats and email an HTML report to the Boss + CC list."""
